@@ -1,4 +1,4 @@
-------------------------------------------------------------------------------------------------------------
+This userspace driver provide an alsa sequencer client for the iConnectivity (TM) MIO/Midi+ devices using the ethernet port.
 
 Some notes about the MIO RTP Implementation:
 
@@ -18,33 +18,33 @@ sudo make install
 
 The file "mio" will be installed under /usr/bin
 
-This userspace driver provide an alsa sequencer client for the iConnectivity (TM) MIO/Midi+ devices using the ethernet port.
-
-v0.1: Initial public release
-v0.2: Demonize after start. Terminal can be closed after start of the driver and no "&" needed anymore.
-v0.3: Minor corrections
-
 TODO:
 - periodically try to (re-)open RTP midi session if not connected
 - endianess
-- adfd/process timestamps
+- add/process timestamps
 
 Usage:
 
 Make sure your iConnectivity (tm) device is switched on and connected to the local LAN.
 
-mio <alsa client name> <mio host address> <mio port> <local port>
+mio \<alsa client name\> \<mio host address\> \<mio port\> \<local port\></code>
 
-<alsa client name> : Name to use for the alsa sequencer client
-<mio host address> : IPV4 address of the MIO device
-<mio port>         : Ethernet port used by the mio. This can be set with the iConfig tool (which can be run with wine) 
-<local port>       : Ethernet port used on the Linux computer
+\<alsa client name\> : Name to use for the alsa sequencer client
+
+\<mio host address\> : IPV4 address of the MIO device
+
+\<mio port\>         : Ethernet port used by the mio. This can be set with the iConfig tool (which can be run with wine)
+
+\<local port\>       : Ethernet port used on the Linux computer
 
 Example using all 4 possible ethernet connections (= RTP midi sessions):
 
 mio  MIO-1 192.168.1.100 5004 6100
+
 mio  MIO-2 192.168.1.100 5006 6102
+
 mio  MIO-3 192.168.1.100 5008 6104
+
 mio  MIO-4 192.168.1.100 5010 6108
 
 Note 1: The devices require a few seconds (about 10-15) until they are ready to start transmission/reception of midi messages
