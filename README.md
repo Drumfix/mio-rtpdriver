@@ -2,11 +2,11 @@ This userspace driver provide an alsa sequencer client for the iConnectivity (TM
 
 Some notes about the MIO RTP Implementation:
 
-- Mio fireware bug? It sets the M bit in the RTP hedaer to 0 instead of 1 and expects all RTP messages 
-  to also have the M bit set to zero.
-- Mio requires the host to bind its UDP ports to two consecutive ports, so default binding by an initial sendto is not possible
+- Mio fireware bug? It sets the M bit in the RTP Midi header to 0 instead of 1 and expects all RTP messages 
+  to also have the M bit set to zero. This is the oposite of what RFC6295 and the Apple Midi Spec says.
+- The Mio requires the host to bind its UDP ports to two consecutive ports, so default binding by an initial sendto is not possible
 - After the first 3 sync cycles initiated by the host, the Mio itself initiates 2 sync cycles and accepts midi data only
-  after these sny cycles have completed.
+  after these sync cycles have completed.
   IMO this is not compliant to the Apple Midi Spec, which says sync cycles are initiated by the session initiator.
 
 Ok, now on with the driver.
@@ -14,6 +14,7 @@ Ok, now on with the driver.
 Compilation requires gcc/make libc-dev and alsa-dev installed
 
 make
+
 sudo make install
 
 The file "mio" will be installed under /usr/bin
