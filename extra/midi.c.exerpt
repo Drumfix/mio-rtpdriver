@@ -1,5 +1,118 @@
-// display the USB jack port names of the MIO 10 instead of the default names
-// replace this function in your-linux-kernel-source/sound/usb/midi.c file
+/* update <your-linux-kernel>/sound/usb/midi.c */
+
+static int iconnectivity_port_name(struct snd_usb_midi* umidi,
+				       int number,
+				       struct snd_rawmidi_substream * substream)
+{
+        #define MIO10_PORT_NAME_MAX_LENGTH 128
+
+        char string[MIO10_PORT_NAME_MAX_LENGTH];
+        unsigned int string_length = 0;
+        int string_index_base = -1;
+
+        memset(string, 0, sizeof(string));
+
+        if (USB_ID_VENDOR(umidi->usb_id) != 0x2321) {
+           return -1;
+        }
+
+        switch (USB_ID_PRODUCT(umidi->usb_id)) {
+
+           /* MIO2 */
+
+           case 0x0003:
+           case 0x0004:
+           case 0x0005:
+              string_index_base = -1;
+              break;
+
+           /* MIO4 */
+
+           case 0x0006:
+           case 0x0007:
+           case 0x0008:
+              string_index_base = -1;
+              break;
+
+           /* MIO */
+
+           case 0x0009:
+           case 0x000a:
+              string_index_base = -1;
+              break;
+
+           /* iConnectMIDI1 */
+
+           case 0x000b:
+           case 0x000c:
+              string_index_base = -1;
+              break;
+
+           /* iConnectMIDI2+ */
+
+           case 0x000d:
+           case 0x000e:
+           case 0x000f:
+              string_index_base = -1;
+              break;
+
+           /* iConnectMIDI4+ */
+
+           case 0x0010:
+           case 0x0011:
+           case 0x0012:
+           case 0x0013:
+              string_index_base = -1;
+              break;
+
+
+           /* iConnectAUDIO4+ */
+
+           case 0x0014:
+           case 0x0015:
+           case 0x0016:
+              string_index_base = -1;
+              break;
+
+           /* iConnectAUDIO2+ */
+
+           case 0x0017:
+           case 0x0018:
+           case 0x0019:
+              string_index_base = -1;
+              break;
+
+           /* MIO10 */
+
+           case 0x001a:
+           case 0x001b:
+           case 0x001c:
+              string_index_base = 16;
+              break;
+
+           /* iConnectAUDIO2/4 */
+
+           case 0x0023:
+           case 0x0024:
+              string_index_base = -1;
+              break;
+
+           default:
+              break;
+        }
+        
+        if (string_index_base >= 0) {
+
+           string_length = usb_string(umidi->dev, string_index_base+number, string, sizeof(string));
+
+           if (string_length > 0) {
+                   snprintf(substream->name, sizeof(substream->name), "%s", string);
+
+              return 0;
+           }
+        }
+        return -1;
+}
 
 static void snd_usbmidi_init_substream(struct snd_usb_midi* umidi,
 				       int stream, int number,
@@ -9,12 +122,6 @@ static void snd_usbmidi_init_substream(struct snd_usb_midi* umidi,
 	struct port_info *port_info;
 	const char *name_format;
 
-        #define MIO10_PORT_BASE 16
-        #define MIO10_PORT_NAME_MAX_LENGTH 256
-
-        char string[MIO10_PORT_NAME_MAX_LENGTH];
-        unsigned int string_length = 0;
-
 	struct snd_rawmidi_substream *substream =
 		snd_usbmidi_find_substream(umidi, stream, number);
 	if (!substream) {
@@ -23,21 +130,7 @@ static void snd_usbmidi_init_substream(struct snd_usb_midi* umidi,
 		return;
 	}
 
-        memset(string, 0, sizeof(string));
-
-        if (umidi->usb_id == USB_ID(0x2321, 0x001c)) { /* iconnectivity mio10 */
-
-                string_length = usb_string(umidi->dev, MIO10_PORT_BASE+number, string, sizeof(string));
-
-                if (string_length > 0) {
-                   snprintf(substream->name, sizeof(substream->name), "%s", string);
-                }
-                else {
-	           snprintf(substream->name, sizeof(substream->name),
-		        "%s MIDI %d", umidi->card->shortname, number + 1);
-                }
-        }
-        else {
+        if (iconnectivity_port_name(umidi, number, substream) < 0) {
 	        /* TODO: read port name from jack descriptor */
 	        port_info = find_port_info(umidi, number);
 	        name_format = port_info ? port_info->name : "%s MIDI %d";
