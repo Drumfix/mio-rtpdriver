@@ -1,0 +1,120 @@
+--- a/sound/usb/midi.c	2017-06-13 18:45:08.353482161 +0200
++++ b/sound/usb/midi.c	2017-06-13 18:47:52.037478731 +0200
+@@ -78,6 +78,19 @@
+ MODULE_LICENSE("Dual BSD/GPL");
+ 
+ 
++/* A.1  MS Class-Specific Interface Descriptor Subtypes */
++#define USB_MS_HEADER		0x01
++#define USB_MS_MIDI_IN_JACK	0x02
++#define USB_MS_MIDI_OUT_JACK	0x03
++#define USB_MS_ELEMENT		0x04
++
++/* A.2  MS Class-Specific Endpoint Descriptor Subtypes */
++#define USB_MS_GENERAL		0x01
++
++/* A.3  MS MIDI IN and OUT Jack Types */
++#define USB_MS_EMBEDDED		0x01
++#define USB_MS_EXTERNAL		0x02
++
+ struct usb_ms_header_descriptor {
+ 	__u8  bLength;
+ 	__u8  bDescriptorType;
+@@ -86,6 +99,19 @@
+ 	__le16 wTotalLength;
+ } __attribute__ ((packed));
+ 
++#define USB_DT_MS_HEADER_SIZE	7
++
++struct usb_midi_in_jack_descriptor {
++	__u8  bLength;
++	__u8  bDescriptorType;
++	__u8  bDescriptorSubtype;
++	__u8  bJackType;
++	__u8  bJackID;
++	__u8  iJack;
++} __attribute__ ((packed));
++
++#define USB_DT_MIDI_IN_SIZE	6
++
+ struct usb_ms_endpoint_descriptor {
+ 	__u8  bLength;
+ 	__u8  bDescriptorType;
+@@ -1733,6 +1759,58 @@
+ 	}
+ }
+ 
++static int iconnectivity_port_name(struct snd_usb_midi* umidi,
++				       int number,
++				       struct snd_rawmidi_substream * substream)
++{
++	#define MIO_PORT_NAME_MAX_LENGTH 128
++
++	char string[MIO_PORT_NAME_MAX_LENGTH];
++	unsigned int string_length = 0;
++	int string_index_base = -1;
++
++	struct usb_interface* intf;
++	struct usb_host_interface *hostif;
++	struct usb_midi_in_jack_descriptor* desc;
++
++	unsigned int i = USB_DT_MS_HEADER_SIZE;
++
++	if (USB_ID_VENDOR(umidi->usb_id) != 0x2321) {
++		return -1;
++	}
++
++	memset(string, 0, sizeof(string));
++
++	intf = umidi->iface;
++	if (!intf)
++		return -1;
++	hostif = &intf->altsetting[0];
++
++	while (i < hostif->extralen && string_index_base == -1) {
++
++		desc = (struct usb_midi_in_jack_descriptor*)(hostif->extra + i);
++		i += desc->bLength;
++
++		if (desc->bLength == USB_DT_MIDI_IN_SIZE &&
++		    desc->bDescriptorType == USB_DT_CS_INTERFACE &&
++		    desc->bDescriptorSubtype == USB_MS_MIDI_IN_JACK &&
++		    desc->bJackType == USB_MS_EMBEDDED) {
++
++			string_index_base = desc->iJack;
++		}
++	}
++
++	if (string_index_base >= 0) {
++		string_length = usb_string(umidi->dev, string_index_base+number, string, sizeof(string));
++
++		if (string_length > 0) {
++			snprintf(substream->name, sizeof(substream->name), "%s", string);
++			return 0;
++		}
++	}
++	return -1;
++}
++
+ static void snd_usbmidi_init_substream(struct snd_usb_midi *umidi,
+ 				       int stream, int number,
+ 				       struct snd_rawmidi_substream **rsubstream)
+@@ -1748,11 +1826,13 @@
+ 		return;
+ 	}
+ 
+-	/* TODO: read port name from jack descriptor */
+-	port_info = find_port_info(umidi, number);
+-	name_format = port_info ? port_info->name : "%s MIDI %d";
+-	snprintf(substream->name, sizeof(substream->name),
+-		 name_format, umidi->card->shortname, number + 1);
++	if (iconnectivity_port_name(umidi, number, substream) < 0) {
++		/* TODO: read port name from jack descriptor */
++		port_info = find_port_info(umidi, number);
++		name_format = port_info ? port_info->name : "%s MIDI %d";
++		snprintf(substream->name, sizeof(substream->name),
++			 name_format, umidi->card->shortname, number + 1);
++	}
+ 
+ 	*rsubstream = substream;
+ }
